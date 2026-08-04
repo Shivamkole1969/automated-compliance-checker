@@ -17,10 +17,16 @@ Company policy {policy_id}, section "{policy_section}":
 
 Decide whether the policy conflicts with the regulation.
 
+Mark violates true only when both of these hold:
+1. The policy permits or enables the specific activity the regulation governs.
+2. It allows that activity without the control the regulation makes mandatory.
+
+Mark violates false when the policy is silent on the regulated activity, covers a different
+subject, or already requires an equivalent or stricter control. Failing to mention the
+regulation's topic is not by itself a conflict.
+
 Rules:
 - Use only the two texts above. Do not rely on outside knowledge or assume details that are not written.
-- A conflict exists when the policy permits something the regulation restricts, or when it omits a control the regulation makes mandatory.
-- If the policy covers a different subject than the regulation, there is no conflict.
 - Quote the specific wording that decided your answer.
 - Leave recommended_action empty when there is no conflict."""
 
