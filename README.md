@@ -51,6 +51,8 @@ python main.py --top-k 3
 
 ## Output
 
+A real run of `python main.py --top-k 1`:
+
 ```json
 {
   "target_regulation": "REG_2026_PR_COMPLIANCE",
@@ -58,16 +60,43 @@ python main.py --top-k 3
   "conflicting_policies": [
     {
       "policy_id": "policy_001",
-      "reason": "..."
+      "reason": "The regulation requires \"explicit, documented pre-approval ... prior to publication\" for all external communications about active projects, while the policy states employees are \"encouraged to share general project milestones ... on public social media platforms\" without any mention of pre-approval. This permits sharing that the regulation restricts, creating a conflict."
     }
   ],
-  "recommended_action": "...",
-  "trace_id": "..."
+  "recommended_action": "Add a requirement that all public posts about active projects must obtain documented pre-approval from the PR Compliance Committee before publication.",
+  "trace_id": "a356ec289f22037e9b2d68662e9310e9"
 }
 ```
 
 `trace_id` links straight to the run in Langfuse, so any verdict can be traced back to the
-retrieved policies and the exact prompt that produced it.
+retrieved policies and the exact prompt that produced it:
+
+```
+compliance-check              1.58s
+  LangGraph                   1.57s
+    retrieve                  0.11s
+    audit                     1.46s
+      ChatGroq                1.46s   441 -> 509 tokens
+```
+
+The second regulation is handled by the same graph, no code changes:
+
+```
+$ python main.py --regulation REG_2026_SEC_VENDOR --top-k 1
+policy_003 conflicts. It lets Department Heads approve SaaS tools under $5,000 without an
+InfoSec review, while the regulation requires that review regardless of contract value.
+```
+
+### On the default `--top-k 2`
+
+At the default depth the checker also flags `policy_002` against the PR regulation. That is
+not a false positive. The regulation covers "technical publications", and `policy_002` allows
+architecture diagrams to go out on tech blogs after a Senior Engineer peer review, which is not
+the PR Compliance Committee sign-off the regulation demands.
+
+The narrower `--top-k 1` reproduces the single-conflict answer from the brief. Both are correct
+at their retrieval depth, so the depth is a flag rather than a hardcoded value. Widening it
+trades a little precision for recall, which is the safer direction for compliance work.
 
 ## Tests
 
@@ -98,6 +127,11 @@ existing two.
 **Pydantic structured output.** The auditor is bound to a schema, so the model returns a typed
 object instead of prose we would have to parse. This is the main guard against hallucinated
 output shapes.
+
+**json_schema rather than tool calling.** Bound as a tool, `llama-3.3-70b-versatile` reasoned
+correctly but returned `violates` as the string `"true"`, which Groq rejected. Binding with
+`method="json_schema"` on `openai/gpt-oss-120b` makes Groq enforce the types server side, so a
+malformed verdict never reaches the application at all.
 
 **Retrieve before you audit.** Only the policies that are actually relevant reach the prompt.
 With three policies that hardly matters, but the token cost stays flat as the library grows to

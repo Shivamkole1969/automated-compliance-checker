@@ -37,11 +37,13 @@ def make_auditor():
         raise RuntimeError("GROQ_API_KEY is not set. Copy .env.example to .env and add your key.")
 
     llm = ChatGroq(
-        model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+        model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
         temperature=0,
         max_retries=3,
     )
-    return llm.with_structured_output(PolicyVerdict)
+    # json_schema makes Groq enforce the schema server side. Tool calling let a model
+    # return violates as the string "true", which failed validation.
+    return llm.with_structured_output(PolicyVerdict, method="json_schema")
 
 
 def build_graph(collection, auditor, top_k=2):
